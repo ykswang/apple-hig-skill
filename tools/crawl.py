@@ -1,4 +1,5 @@
 """Crawl Apple HIG via the DocC JSON API and render every page to Markdown."""
+import hashlib
 import json
 import os
 import sys
@@ -157,7 +158,8 @@ def visit(path, parent, group):
     slug = path.rsplit("/", 1)[-1]
     with open(os.path.join(OUT, "raw", slug + ".md"), "w") as f:
         f.write(md)
-    pages.append({"path": path, "parent": parent, "group": group, "title": title, "slug": slug, "chars": len(md)})
+    pages.append({"path": path, "parent": parent, "group": group, "title": title, "slug": slug, "chars": len(md),
+                  "sha256": hashlib.sha256(md.encode()).hexdigest()})
     return [(p, path, g) for g, p in child_paths(d)]
 
 

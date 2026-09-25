@@ -1,53 +1,172 @@
 # apple-design
 
-把 Apple [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines) 全站 173 个页面提炼成一个 Agent Skill（`skills/apple-hig`），供 Claude 或其他 AI 在设计、编写、评审 Apple 平台 UI 时按需加载、遵循。
+An Agent Skill that packages Apple's
+[Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines) so Claude (or any other
+AI agent) can design, build, and review UI for Apple platforms the way Apple recommends.
 
-内容版本：抓取于 2026-09-25，HIG 最新变更为 2026 年 9 月（含 Liquid Glass、iPhone Duo、Apple In-App Purchase）。
+All 173 pages of the HIG are included, current as of **September 2026**. That covers Liquid Glass, iPhone Duo, and
+Apple In-App Purchase. The 158 pages with real content are each distilled into their own reference file.
 
-## 结构
+## What's in the repo
 
 ```
-skills/apple-hig/
-├── SKILL.md                 # 入口：使用流程、8 大设计原则、跨页面硬性规则（尺寸/对比度/字号）、任务→文件路由表、评审清单
+skills/apple-hig/            ← the skill; this folder is what you install
+├── SKILL.md                 entry point: workflow, design principles, cross-cutting rules
+│                            (hit targets, contrast, type sizes, Liquid Glass…), task → file routing, review checklist
 └── references/
-    ├── INDEX.md             # 全部 158 个页面的一行摘要索引，按官网左侧菜单顺序排列
-    ├── getting-started/     # 设计原则 + 各平台（iOS/iPadOS/macOS/watchOS/tvOS/visionOS/游戏/iPhone Duo）
-    ├── foundations/         # 颜色、排版、布局、材质、SF Symbols、图标、无障碍、隐私……
-    ├── patterns/            # 加载、引导、搜索、设置、模态、拖放、撤销……
-    ├── components/          # 所有系统组件（按钮、菜单、工具栏、标签栏、sheet、alert、widget……）
-    ├── inputs/              # 手势、键盘、指针、眼动、Apple Pencil、Digital Crown……
-    └── technologies/        # Apple Pay、Sign in with Apple、Wallet、Siri、CarPlay、HealthKit……
-tools/
-├── crawl.py                 # 通过 DocC JSON 接口抓取全站并渲染为 Markdown
-├── DISTILL_SPEC.md          # 提炼规范（每页 → 参考文件的格式与保真规则）
-├── build_index.py           # 生成 references/INDEX.md
-└── verify.py                # 校验：参考文件齐全、原文数值规格全部保留、规则条数对照
+    ├── INDEX.md             one-line summary of every page, in the same order as the HIG sidebar
+    ├── getting-started/     design principles + each platform (iOS, iPadOS, macOS, watchOS, tvOS, visionOS, games, iPhone Duo)
+    ├── foundations/         color, typography, layout, materials, SF Symbols, icons, accessibility, privacy, …
+    ├── patterns/            loading, onboarding, searching, settings, modality, drag and drop, undo, …
+    ├── components/          every system component: buttons, menus, toolbars, tab bars, sheets, alerts, widgets, …
+    ├── inputs/              gestures, keyboards, pointers, eyes, Apple Pencil, Digital Crown, …
+    └── technologies/        Apple Pay, Sign in with Apple, Wallet, Siri, CarPlay, HealthKit, …
+tools/                       ← only needed to refresh the skill
+├── crawl.py                 downloads the whole HIG through Apple's DocC JSON API and renders it to Markdown
+├── diff_crawl.py            compares a new download with the committed baseline and lists changed pages
+├── hig-manifest.json        the baseline: a content hash for every page the skill was built from
+├── DISTILL_SPEC.md          rules for turning a HIG page into a reference file
+├── build_index.py           regenerates references/INDEX.md
+└── verify.py                checks that reference files exist and kept every number from the source
 ```
 
-参考文件为英文，与原文术语保持一致，便于 AI 精确匹配 API 名和组件名。每个文件的结构一致：适用场景 → 规则（保留 Apple 原文的 Never/Avoid/Prefer/Consider 强度）→ 平台差异 → 规格数值 → API → 相关页面。
+Every reference file has the same layout: when to use it → rules → platform considerations → specs → APIs →
+related pages. Rules keep Apple's own strength words (*Never / Avoid / Prefer / Consider*), and all numbers and spec
+tables are copied exactly from the source.
 
-## 安装
+## Install
+
+After cloning, run the commands below from the repository root.
+
+### Claude Code
+
+Claude Code picks up skills from `~/.claude/skills/` (every project) or `<project>/.claude/skills/` (one project).
+
+**For all projects (symlink, recommended).** A `git pull` then updates the skill in place:
 
 ```bash
-# Claude Code（全局）
+mkdir -p ~/.claude/skills
 ln -s "$PWD/skills/apple-hig" ~/.claude/skills/apple-hig
-# 或仅对某个项目生效
-ln -s "$PWD/skills/apple-hig" <project>/.claude/skills/apple-hig
 ```
 
-其他 AI：把 `SKILL.md` 作为系统提示/上下文，并允许其按路由表读取 `references/` 下的文件。
-
-## 更新
+**For one project.** Copy the folder in, so the skill is committed with that project and works for everyone on
+your team:
 
 ```bash
-python3 tools/crawl.py /tmp/hig                  # 重新抓取原文 → /tmp/hig/raw/*.md + pages.json
-# 按 tools/DISTILL_SPEC.md 重新提炼有变化的页面（对比新旧 raw 即可定位）
+mkdir -p /path/to/your-project/.claude/skills
+cp -R skills/apple-hig /path/to/your-project/.claude/skills/
+```
+
+Start a new Claude Code session to load the skill. Claude uses it by itself when a task involves Apple platform UI.
+You can also ask for it directly: *"Use the apple-hig skill to review this SwiftUI view."*
+
+### Claude apps (claude.ai / desktop)
+
+Zip the skill folder and upload it where your Claude app lets you add custom skills:
+
+```bash
+cd skills && zip -r ../apple-hig.zip apple-hig && cd ..
+```
+
+### Other AI agents
+
+Give the agent `skills/apple-hig/SKILL.md` as instructions and let it read files under `skills/apple-hig/references/`.
+The files are plain Markdown with relative links. `SKILL.md` tells the agent which files to open for which task, so
+it only loads what it needs.
+
+## Refreshing the skill when Apple updates the HIG
+
+Apple mostly updates the HIG at WWDC (June) and at the fall hardware launches (September), plus smaller updates in
+between. Each HIG page ends with a *Change log* that shows what changed and when.
+
+**Requirements:** Python 3.9+ (standard library only), a network connection, and an AI agent (Claude Code
+recommended) for the rewriting step.
+
+### 1. Download the current HIG
+
+```bash
+python3 tools/crawl.py /tmp/hig
+```
+
+This writes every page to `/tmp/hig/raw/<slug>.md` and a page list with content hashes to `/tmp/hig/pages.json`.
+It takes about a minute.
+
+### 2. Find what changed
+
+```bash
+python3 tools/diff_crawl.py /tmp/hig
+```
+
+Example output:
+
+```
+NEW      references/patterns/new-thing.md  <- /design/human-interface-guidelines/new-thing
+CHANGED  references/components/buttons.md  <- /design/human-interface-guidelines/buttons
+CHANGED  (index page: update INDEX.md / SKILL.md routing)  <- /design/human-interface-guidelines/components
+REMOVED  references/components/toggles.md  <- /design/human-interface-guidelines/toggles
+new=1 changed=2 removed=1 unchanged=169
+```
+
+If it reports `new=0 changed=0 removed=0`, the skill is already up to date and you can stop here.
+
+### 3. Rewrite the new and changed pages
+
+Each `NEW` or `CHANGED` page has to be rewritten from its new source. In Claude Code, open this repo and paste the
+following prompt, filling in the page list from step 2:
+
+```
+Read tools/DISTILL_SPEC.md and follow it exactly.
+For each page below, read /tmp/hig/raw/<slug>.md in full and (re)write the reference file at
+skills/apple-hig/references/<section>/<slug>.md. Replace the whole file; don't patch the old version.
+Only use API names that appear as links in the raw page.
+Pages: components/buttons, patterns/new-thing
+```
+
+When many pages changed (usually after WWDC), ask Claude to split them across parallel subagents, 15–25 pages each.
+
+Then handle the rest by hand:
+
+- **`REMOVED` pages:** delete the reference file, and remove any mention of it from `SKILL.md` and from other
+  files' *Related* lines (`grep -rn "<slug>" skills/`).
+- **`index page` lines:** a section was reorganized. Check whether `SKILL.md`'s routing table still makes sense.
+- **Foundations pages** (`accessibility`, `typography`, `color`, `materials`, `layout`, `privacy`, …): `SKILL.md`
+  copies some of their numbers and rules (hit-target table, contrast table, default type sizes, Liquid Glass rules).
+  If any of these pages changed, compare those sections of `SKILL.md` with the new reference files and update them.
+- If the platform or feature list changed, update the "content current through …" line near the top of `SKILL.md`
+  and the skill's `description`.
+
+### 4. Rebuild the index and verify
+
+```bash
 python3 tools/build_index.py /tmp/hig skills/apple-hig
 python3 tools/verify.py /tmp/hig skills/apple-hig
 ```
 
-## 已知说明
+`build_index.py` fails if a page has no reference file. `verify.py` lists every page where a number from the source
+is missing, or where the reference has noticeably fewer rules than the source has bold rule sentences. Some of these
+are false alarms: times such as `9:41` in example screenshots, or bold labels that aren't rules. Check each one it
+lists and fix any real gaps.
 
-- 当前 HIG 的 Layout 页已不再提供按设备的屏幕尺寸表（仅 change log 中残留提及）；Widget 与 Live Activity 页仍保留按设备的尺寸。
-- 部分表格中的数值疑似 Apple 原文笔误（如 complications 的 “18x18x pt”、typography 中个别 leading/tracking 值），已按原文照录，未做修正。
-- 各参考文件的 APIs 段只包含原文中实际链接到的开发者文档名称。
+### 5. Save the new baseline and commit
+
+```bash
+python3 tools/diff_crawl.py /tmp/hig --update
+git add skills tools
+git commit -m "Refresh apple-hig from HIG as of <month year>"
+```
+
+`--update` overwrites `tools/hig-manifest.json`, so the next refresh compares against this download. Run it only
+after the reference files are updated. If you run it earlier, the next diff won't show the pages you skipped.
+
+If you installed with a symlink, other machines pick up the changes with `git pull`. Copied installs need copying
+again.
+
+## Known notes
+
+- The current HIG *Layout* page no longer has per-device screen-size tables. Per-device sizes now appear only on the
+  *Widgets* and *Live Activities* pages.
+- A few table values look like typos in Apple's source (for example "18x18x pt" on *Complications*, and some
+  leading/tracking values on *Typography*). They are copied as written, not corrected.
+- The *APIs* section of each reference file only lists developer documentation that the source page links to.
+- HIG content © Apple Inc. This repository contains condensed notes for use as AI context. The authoritative
+  version is always [developer.apple.com/design/human-interface-guidelines](https://developer.apple.com/design/human-interface-guidelines).
